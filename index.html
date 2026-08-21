@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#120f0a">
+<link rel="icon" href="data:,">
+<title>Gladiator Draft — FFA Battle Royale</title>
+<style>
+  *,*::before,*::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg:#120f0a; --panel:#1d1810; --panel2:#241e14;
+    --gold:#e8b64c; --gold2:#ffe6a3; --red:#c8482a; --blood:#a02020;
+    --text:#f0e6d2; --dim:#a99f8a; --line:#44392a;
+  }
+  html,body { margin:0; padding:0; height:100%; }
+  body {
+    background:radial-gradient(120% 90% at 50% 0%, #2a2114 0%, var(--bg) 60%);
+    color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    min-height:100dvh; overflow-x:hidden;
+    -webkit-user-select:none; user-select:none;
+  }
+  .wrap { max-width:640px; margin:0 auto; padding:14px 14px 40px; }
+
+  h1 { font-size:22px; margin:6px 0 2px; color:var(--gold); letter-spacing:1px; text-transform:uppercase; }
+  h1 .nx { color:var(--dim); font-weight:400; }
+  .sub { color:var(--dim); font-size:13px; margin:0 0 14px; }
+
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; margin-bottom:14px; }
+
+  label { display:block; font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px; }
+  .row { display:flex; gap:8px; }
+  input[type=text] {
+    flex:1; background:#0e0b08; border:1px solid var(--line); color:var(--text);
+    padding:12px 12px; border-radius:10px; font-size:16px; outline:none; min-width:0;
+  }
+  input[type=text]:focus { border-color:var(--gold); }
+
+  .btn {
+    background:linear-gradient(180deg,#3a2d1a,#2a2112); color:var(--gold2);
+    border:1px solid #5a4526; padding:12px 16px; border-radius:10px;
+    font-size:15px; font-weight:600; cursor:pointer; letter-spacing:.4px;
+  }
+  .btn:active { transform:scale(.96); }
+  .btn.primary { background:linear-gradient(180deg,#e0a63f,#b87e1e); color:#251a05; border-color:#f0c66a; }
+  .btn.big { width:100%; padding:16px; font-size:18px; border-radius:12px; }
+  .btn.danger { background:linear-gradient(180deg,#8a2f1e,#5e1f13); color:#ffe0d0; border-color:#a54931; }
+  .btn.small { padding:7px 11px; font-size:13px; border-radius:8px; }
+  .btn:disabled { opacity:.4; cursor:default; }
+
+  .quiz { margin-top:12px; }
+  .glad { display:flex; align-items:center; background:var(--panel2); border:1px solid var(--line); border-radius:9px; padding:7px 10px; margin-bottom:6px; }
+  .glad .ic { width:28px; font-size:19px; text-align:center; margin-right:9px; }
+  .glad .nm { flex:1; font-size:15px; font-weight:600; }
+  .glad .rm { color:#8a7a66; font-size:20px; padding:0 6px; cursor:pointer; }
+  .glad .rm:active { color:var(--red); }
+  .empty { color:#6b6251; font-size:13px; font-style:italic; text-align:center; padding:10px 0; }
+
+  .launch { margin-top:16px; }
+  .tip { color:var(--dim); font-size:12px; text-align:center; margin-top:10px; line-height:1.5; }
+
+  /* ---- arena ---- */
+  .screen { display:none; }
+  .screen.on { display:block; }
+
+  #arenaWrap { position:fixed; inset:0; background:var(--bg); }
+  #arena { width:100%; height:100%; display:block; touch-action:none; }
+  #killfeed {
+    position:fixed; top:10px; left:10px; right:10px; z-index:5;
+    display:flex; flex-direction:column; align-items:flex-start; gap:3px; pointer-events:none;
+  }
+  .kf {
+    background:rgba(10,7,4,.75); border-left:3px solid var(--blood);
+    padding:4px 9px; border-radius:0 6px 6px 0; font-size:13px; font-weight:600;
+    animation:kfin .3s ease, kfout .5s ease 2.8s forwards;
+    max-width:90%;
+  }
+  .kf b { color:var(--gold2); }
+  .kf .fall { color:var(--dim); font-size:11px; }
+  @keyframes kfin { from { transform:translateX(-30px); opacity:0; } }
+  @keyframes kfout { to { opacity:0; } }
+  #aliveCount {
+    position:fixed; bottom:12px; left:0; right:0; z-index:5; text-align:center;
+    font-size:14px; color:var(--dim); letter-spacing:1px; pointer-events:none;
+    text-shadow:0 1px 3px #000;
+  }
+  #aliveCount b { color:var(--gold2); font-size:17px; }
+  #banner {
+    position:fixed; top:46%; left:0; right:0; z-index:6; text-align:center; pointer-events:none;
+    opacity:0; transition:opacity .4s;
+  }
+  #banner.on { opacity:1; }
+  #banner .big {
+    font-size:34px; font-weight:800; color:var(--gold); text-transform:uppercase;
+    text-shadow:0 2px 0 #000, 0 4px 18px rgba(232,182,76,.4);
+    letter-spacing:2px;
+  }
+  #banner .big.crown { font-size:44px; }
+  #banner .nm { font-size:20px; color:var(--gold2); margin-top:4px; }
+  #banner .cap { font-size:13px; color:var(--dim); margin-top:6px; font-style:italic; }
+
+  /* ---- results ---- */
+  #resultsHead { text-align:center; }
+  #resultsHead .cap { color:var(--dim); font-size:13px; margin:2px 0 12px; }
+  .pickrow { display:flex; align-items:center; background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:9px 12px; margin-bottom:7px; }
+  .pickrow .num { width:34px; font-size:16px; font-weight:800; color:var(--dim); }
+  .pickrow.p1 .num { color:var(--gold); }
+  .pickrow.p1 { border-color:var(--gold); box-shadow:0 0 0 1px var(--gold) inset; }
+  .pickrow .nm { flex:1; font-size:16px; font-weight:600; }
+  .pickrow .fall { font-size:12px; color:var(--dim); }
+  .pickrow .crown { font-size:18px; margin-right:2px; }
+  .legend { color:var(--dim); font-size:12px; text-align:center; margin:2px 0 12px; line-height:1.5; }
+  .actions { display:flex; flex-direction:column; gap:9px; margin-top:14px; }
+</style>
+</head>
+<body>
+
+<!-- ============ SETUP ============ -->
+<div id="setup" class="screen on">
+  <div class="wrap">
+    <h1>🏛️ Gladiator <span class="nx">Draft</span></h1>
+    <p class="sub">Enter your league. They fight. Death order = draft order. Champion picks first.</p>
+
+    <div class="card">
+      <label>Add a gladiator</label>
+      <div class="row">
+        <input type="text" id="nameInput" placeholder="e.g. Abdul" maxlength="22" autocomplete="off" autocapitalize="words">
+        <button class="btn" id="addBtn">Add</button>
+      </div>
+      <div class="quiz" id="roster"></div>
+      <button class="btn danger small" id="clearBtn" style="margin-top:6px;">Clear all</button>
+    </div>
+
+    <div class="launch">
+      <button class="btn primary big" id="fightBtn" disabled>⚔️ Let the blood flow</button>
+      <p class="tip">Need 2 or more gladiators. Fights are random — same names, new result every time.<br>Tip: everyone should add their own name on one phone before the draft.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ARENA ============ -->
+<div id="arenaWrap" class="screen">
+  <canvas id="arena"></canvas>
+  <div id="killfeed"></div>
+  <div id="banner">
+    <div class="big crown" id="bannerCrown"></div>
+    <div class="big" id="bannerText"></div>
+    <div class="nm" id="bannerName"></div>
+    <div class="cap" id="bannerCap"></div>
+  </div>
+  <div id="aliveCount"></div>
+</div>
+
+<!-- ============ RESULTS ============ -->
+<div id="results" class="screen">
+  <div class="wrap">
+    <div id="resultsHead">
+      <h1>🏆 Draft Order</h1>
+      <p class="cap" id="resSub"></p>
+      <div class="legend">The stone speaks. Champion takes <b style="color:var(--gold)">pick 1</b>, last one fell takes the final pick.</div>
+    </div>
+    <div id="pickList"></div>
+    <div class="actions">
+      <button class="btn primary big" id="rerunBtn">⚔️ Run it back</button>
+      <button class="btn" id="editBtn">Edit names</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ======================== state ======================== */
+var names = [];
+try { names = JSON.parse(localStorage.getItem('glad_names') || '[]'); } catch(e){ names=[]; }
+
+var PALETTE = [
+  ['#e04f3a','#f6b93b'], ['#3aa6e0','#eaf4ff'], ['#51c24f','#d7ffd2'],
+  ['#b06ae0','#efe2ff'], ['#e0a03a','#ffe9b8'], ['#4fc9c0','#d5fffb'],
+  ['#e05ad0','#ffd9f8'], ['#8a8a8a','#ffffff'], ['#d9d845','#fffecd'],
+  ['#6f8fe0','#dfe8ff'], ['#e07a3a','#ffe1c2'], ['#4fb06a','#d7ffdf']
+];
+var EMOJI = ['⚔️','🛡️','🗡️','🏹','🔨','🪓','🗿','🔥','💀','🥇','🐺','🐍','🦅','🐂','🦁','🌩️','⚡','🍺','👑','🦂'];
+
+var state = 'setup';            // setup | fight | results
+var fight = null;               // fight runtime
+var audioCtx = null;
+var lastTime = 0;
+
+/* ======================== names / roster ======================== */
+function renderRoster() {
+  var box = document.getElementById('roster');
+  var fb = document.getElementById('fightBtn');
+  fb.disabled = names.length < 2;
+  if (!names.length) {
+    box.innerHTML = '<div class="empty">No gladiators yet. Enter a name to step into the arena.</div>';
+    return;
+  }
+  box.innerHTML = names.map(function(n,i){
+    return '<div class="glad"><div class="ic">'+EMOJI[i % EMOJI.length]+'</div><div class="nm">'+esc(n)+'</div>'+
+           '<div class="rm" data-i="'+i+'">✕</div></div>';
+  }).join('');
+  box.querySelectorAll('.rm').forEach(function(el){
+    el.onclick = function(){ names.splice(+el.dataset.i,1); save(); renderRoster(); };
+  });
+}
+function save(){ try{ localStorage.setItem('glad_names', JSON.stringify(names)); }catch(e){} }
+function esc(s){ return s.replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+document.getElementById('addBtn').onclick = addName;
+document.getElementById('clearBtn').onclick = function(){
+  if(!names.length) return;
+  if(!confirm('Remove all gladiators?')) return;
+  names = []; save(); renderRoster();
+};
+document.getElementById('nameInput').addEventListener('keydown', function(e){ if(e.key==='Enter') addName(); });
+document.getElementById('fightBtn').onclick = startFight;
+
+function addName(){
+  var inp = document.getElementById('nameInput');
+  var v = inp.value.trim();
+  if(!v) return;
+  if(names.length >= 20){ alert('Max 20 gladiators — the arena is not that big.'); return; }
+  names.push(v); inp.value=''; save(); renderRoster();
+  inp.focus();
+}
+
+/* ======================== audio ======================== */
+function initAudio(){ if(audioCtx) return; try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+function sfx(type){
+  if(!audioCtx || audioCtx.state==='suspended'){ if(audioCtx) audioCtx.resume(); return; }
+  var t = audioCtx.currentTime;
+  try{
+    if(type==='hit'){
+      var o=audioCtx.createOscillator(), g=audioCtx.createGain();
+      o.type='square'; o.frequency.setValueAtTime(140+Math.random()*60,t);
+      g.gain.setValueAtTime(0.12,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.12);
+      o.connect(g); g.connect(audioCtx.destination); o.start(t); o.stop(t+0.13);
+    } else if(type==='die'){
+      var o2=audioCtx.createOscillator(), g2=audioCtx.createGain();
+      o2.type='sawtooth'; o2.frequency.setValueAtTime(220,t);
+      o2.frequency.exponentialRampToValueAtTime(40,t+0.7);
+      g2.gain.setValueAtTime(0.18,t); g2.gain.exponentialRampToValueAtTime(0.001,t+0.7);
+      o2.connect(g2); g2.connect(audioCtx.destination); o2.start(t); o2.stop(t+0.72);
+    } else if(type==='win'){
+      [523,659,784,1047].forEach(function(f,i){
+        var o3=audioCtx.createOscillator(), g3=audioCtx.createGain();
+        o3.type='triangle'; o3.frequency.value=f;
+        var st=t+i*0.14;
+        g3.gain.setValueAtTime(0.16,st); g3.gain.exponentialRampToValueAtTime(0.001,st+0.5);
+        o3.connect(g3); g3.connect(audioCtx.destination); o3.start(st); o3.stop(st+0.5);
+      });
+    } else if(type==='crowd'){
+      var buf=audioCtx.createBuffer(1, audioCtx.sampleRate*1.4, audioCtx.sampleRate);
+      var d=buf.getChannelData(0);
+      for(var i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length, 3);
+      var src=audioCtx.createBufferSource(); src.buffer=buf;
+      var f=audioCtx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=400;
+      var g4=audioCtx.createGain(); g4.gain.setValueAtTime(0.5,t); g4.gain.exponentialRampToValueAtTime(0.001,t+1.5);
+      src.connect(f); f.connect(g4); g4.connect(audioCtx.destination); src.start(t); src.stop(t+1.5);
+    }
+  }catch(e){}
+}
+
+/* ======================== fight simulation ======================== */
+function startFight(){
+  initAudio();
+  if(!names.length) return;
+  state='fight';
+  show('arenaWrap');
+  var canvas = document.getElementById('arena');
+  var W = canvas.clientWidth, H = canvas.clientHeight;
+  var dpr = Math.min(window.devicePixelRatio||1, 2);
+  canvas.width = W*dpr; canvas.height = H*dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+
+  var fighters = names.map(function(n,i){
+    return makeFighter(n, i, W, H, names.length);
+  });
+  var deathOrder = [];           // names in order they fell
+  var feed = [];                 // {txt, html}
+  var particles = [];
+  var xmags = 0, shakeT = 0;
+  var ended = false, endTimer = 0;
+
+  fight = { fighters, deathOrder, feed, particles, W, H, ended, endTimer };
+  var aliveCountEl = document.getElementById('aliveCount');
+  var feedEl = document.getElementById('killfeed');
+  var bannerEl = document.getElementById('banner');
+
+  function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+
+  /* give every structure element its own random colors */
+  function makeFighter(name, idx, W, H, total){
+    var pal = PALETTE[idx % PALETTE.length];
+    var margin = Math.max(60, Math.min(W,H)*0.08);
+    var f = {
+      name:name, emoji:EMOJI[idx % EMOJI.length],
+      col:pal[0], light:pal[1],
+      x: margin + Math.random()*(W-2*margin),
+      y: margin + Math.random()*(H-2*margin),
+      vx:0, vy:0, ang:Math.random()*Math.PI*2,
+      r: 16,
+      hp: 100, maxHp:100,
+      alive:true, dying:false, dieT:0,
+      target:null, atkCd: 0,
+      // personality (drives randomness)
+      speed: 55 + Math.random()*85,
+      dmg:  9 + Math.random()*11,
+      aggro: 90 + Math.random()*160,
+      range: 34 + Math.random()*18,
+      atkDelay: 0.45 + Math.random()*0.7,
+      hit:null
+    };
+    return f;
+  }
+
+  function nearest(f){
+    var b=null, bd=Infinity;
+    for(var i=0;i<fighters.length;i++){
+      var o=fighters[i];
+      if(o===f || !o.alive) continue;
+      var d=Math.hypot(o.x-f.x, o.y-f.y);
+      // "randomized" targeting: room for a darker horse to get picked
+      if(d < bd){ bd=d; b=o; }
+    }
+    return {f:b, d:bd};
+  }
+
+  function step(dt){
+    // move fighters
+    for(var i=0;i<fighters.length;i++){
+      var f=fighters[i];
+      if(!f.alive){ if(f.dying){ f.dieT -= dt; if(f.dieT<=0){ f.dying=false; } } continue; }
+      f.atkCd -= dt;
+
+      var nn = nearest(f);
+      var bob;
+      if(nn.f && nn.d < f.aggro){
+        bob = nn.f;
+        var dx=bob.x-f.x, dy=bob.y-f.y, d=nn.d;
+        if(d > f.range){
+          f.vx += (dx/d)*f.speed*3*dt;
+          f.vy += (dy/d)*f.speed*3*dt;
+        } else {
+          // in range: occasionally strike
+          if(f.atkCd<=0){
+            strike(f, bob);
+            f.atkCd = f.atkDelay*(0.6+Math.random()*0.8);
+          }
+        }
+      } else {
+        // wander — drift toward the action sometimes so the fight actually converges
+        if(Math.random()<dt*0.6){
+          var remain = 0, cx=0, cy=0;
+          for(var q=0;q<fighters.length;q++){ var o=fighters[q]; if(o!==f&&o.alive){ remain++; cx+=o.x; cy+=o.y; } }
+          if(remain && Math.random()<0.55){
+            f.ang = Math.atan2(cy/remain-f.y, cx/remain-f.x) + (Math.random()-0.5)*0.7;
+          } else {
+            f.ang = Math.random()*Math.PI*2;
+          }
+        }
+        f.vx += Math.cos(f.ang)*f.speed*1.6*dt;
+        f.vy += Math.sin(f.ang)*f.speed*1.6*dt;
+      }
+
+      // friction + clamp
+      f.vx *= Math.pow(0.001, dt); f.vy *= Math.pow(0.001, dt);
+      var sp = Math.hypot(f.vx,f.vy);
+      if(sp > f.speed){ f.vx=f.vx/sp*f.speed; f.vy=f.vy/sp*f.speed; }
+      f.x += f.vx*dt; f.y += f.vy*dt;
+      if(f.x < f.r){ f.x=f.r; f.vx=Math.abs(f.vx); } else if(f.x>W-f.r){ f.x=W-f.r; f.vx=-Math.abs(f.vx); }
+      if(f.y < f.r){ f.y=f.r; f.vy=Math.abs(f.vy); } else if(f.y>H-f.r){ f.y=H-f.r; f.vy=-Math.abs(f.vy); }
+      if(nn.f) f.ang = Math.atan2(nn.f.y-f.y, nn.f.x-f.x);
+
+      // separator (soft body)
+      for(var j=i+1;j<fighters.length;j++){
+        var o=fighters[j];
+        if(!o.alive) continue;
+        var dx2=f.x-o.x, dy2=f.y-o.y, d2=Math.hypot(dx2,dy2), min=f.r+o.r;
+        if(d2>0 && d2<min){
+          var push=(min-d2)/2, nx=dx2/d2, ny=dy2/d2;
+          f.x += nx*push; f.y += ny*push;
+          o.x -= nx*push; o.y -= ny*push;
+        }
+      }
+    }
+
+    // particles
+    for(i=particles.length-1;i>=0;i--){
+      var p=particles[i];
+      p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=p.g*dt; p.life-=dt;
+      if(p.life<=0) particles.splice(i,1);
+    }
+    shakeT -= dt; if(shakeT<0) shakeT=0;
+  }
+
+  function strike(att, def){
+    var dmg = att.dmg*(0.55+Math.random()*0.9);
+    var crit = Math.random()<0.12;
+    if(crit) dmg*=1.8;
+    def.hp -= dmg;
+    def.hit = {t:0.3, col:att.col};
+    for(var k=0;k<6;k++){
+      particles.push({
+        x:def.x+ (Math.random()-0.5)*def.r*1.4,
+        y:def.y+ (Math.random()-0.5)*def.r*1.4,
+        vx:(Math.random()-0.5)*120, vy:(Math.random()-1)*120, g:320,
+        life:0.3+Math.random()*0.4, r:1.5+Math.random()*2.5,
+        col:crit?'#ffd24a':'#b0302a'
+      });
+    }
+    if(crit) shakeT = 0.12;
+    xmags = Math.max(xmags, 2);
+    sfx('hit');
+    if(def.hp<=0 && def.alive){ kill(att, def, crit); }
+  }
+
+  var deaths=0;
+  function kill(att, def, crit){
+    def.alive=false; def.dying=true; def.dieT=0.9;
+    deaths++;
+    deathOrder.push(def.name);
+    for(var k=0;k<26;k++){
+      particles.push({
+        x:def.x, y:def.y,
+        vx:(Math.random()-0.5)*260, vy:-Math.random()*260-40, g:460,
+        life:0.5+Math.random()*0.7, r:2+Math.random()*3.5, col:'#c03028'
+      });
+    }
+    shakeT = 0.3; xmags = Math.max(xmags, 7);
+    sfx('die');
+    feed.push({
+      html: '<b>'+esc(att.name)+'</b> slew <span style="color:'+def.light+'">'+esc(def.name)+'</span> <span class="fall">('+deaths+' fell)</span>',
+      t: 3.4 + Math.random()*0.6
+    });
+    if(feed.length>4) feed.shift();
+    flushFeed();
+
+    var remaining = fighters.filter(function(f){ return f.alive; }).length;
+    if(remaining===1){
+      var champ = fighters.filter(function(f){ return f.alive; })[0];
+      ended = true;
+      endTimer = 3.6;
+      sfx('win'); sfx('crowd');
+      showBanner(champ);
+    } else if(crit && remaining>1){
+      // occasionally a crowd roar on a crit kill
+    }
+  }
+  function ES(n){ return esc(n); }
+
+  function showBanner(champ){
+    var c=document.getElementById('bannerCrown');
+    var t=document.getElementById('bannerText');
+    var n=document.getElementById('bannerName');
+    var cap=document.getElementById('bannerCap');
+    c.textContent='👑';
+    t.textContent='Champion';
+    n.textContent=champ.name;
+    cap.textContent='Pick 1. The arena has chosen.';
+    bannerEl.classList.add('on');
+    // confetti of gold
+    for(var k=0;k<50;k++){
+      particles.push({
+        x:Math.random()*W, y:-20-Math.random()*80,
+        vx:(Math.random()-0.5)*60, vy:60+Math.random()*90, g:120,
+        life:1.6+Math.random()*1.2, r:2+Math.random()*3, col:['#e8b64c','#ffe6a3','#ffe6a3','#c8932a'][k%4]
+      });
+    }
+  }
+
+  function killers(){ return true; }
+
+  /* ---------- render ---------- */
+  var gfx = {
+    arenaBg(ctx,W,H){
+      ctx.fillStyle='#17130c'; ctx.fillRect(0,0,W,H);
+      var g=ctx.createRadialGradient(W/2,H*0.45,60,W/2,H*0.5,H*0.75);
+      g.addColorStop(0,'#2c2112'); g.addColorStop(1,'#17130c');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      // sand floor texture
+      ctx.fillStyle='rgba(0,0,0,0.25)';
+      for(var i=0;i<40;i++){
+        ctx.beginPath();
+        ctx.arc((i*97)%W, (i*61)%H, 6+ (i*13)%10, 0, Math.PI*2);
+        ctx.fill();
+      }
+      // arena ring
+      ctx.strokeStyle='rgba(200,140,60,0.16)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.ellipse(W/2,H*0.5, Math.min(W,H)*0.42, Math.min(W,H)*0.4, 0,0,Math.PI*2); ctx.stroke();
+    },
+    fighter(f){
+      if(!f.alive){
+        // corpse fading
+        if(f.dying){
+          var a = Math.max(0, f.dieT/0.9);
+          ctx.save(); ctx.globalAlpha=a; ctx.translate(f.x,f.y); ctx.rotate(f.ang);
+          ctx.fillStyle=f.col; ctx.beginPath(); ctx.arc(0,0,f.r,0,Math.PI*2); ctx.fill();
+          // X eyes
+          ctx.strokeStyle='#111'; ctx.lineWidth=2;
+          ctx.beginPath(); ctx.moveTo(-6,-3); ctx.lineTo(-1,2); ctx.moveTo(-1,-3); ctx.lineTo(-6,2); ctx.stroke();
+          ctx.restore();
+        }
+        return;
+      }
+      ctx.save(); ctx.translate(f.x,f.y); ctx.rotate(f.ang);
+      // shadow
+      ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(3, f.r*0.7, f.r*0.95, f.r*0.45, 0,0,Math.PI*2); ctx.fill();
+      // weapon
+      ctx.strokeStyle='#d8dde4'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(8,0); ctx.lineTo(f.r+12,0); ctx.stroke();
+      ctx.strokeStyle='#a9b0ba'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(f.r+12,0); ctx.lineTo(f.r+20,0); ctx.stroke();
+      // sword tip
+      ctx.fillStyle='#eef3fa'; ctx.beginPath();
+      ctx.moveTo(f.r+20,-4); ctx.lineTo(f.r+29,0); ctx.lineTo(f.r+20,4); ctx.fill();
+      // shield
+      ctx.fillStyle='#5a4630'; ctx.beginPath(); ctx.arc(-9,0,9, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#7a6248'; ctx.lineWidth=2; ctx.stroke();
+      // body
+      ctx.fillStyle=f.col; ctx.beginPath(); ctx.arc(0,0,f.r,0,Math.PI*2); ctx.fill();
+      // muscle shine
+      ctx.fillStyle='rgba(255,255,255,0.18)'; ctx.beginPath(); ctx.arc(-4,-4,f.r*0.4,0,Math.PI*2); ctx.fill();
+      // helmet
+      ctx.strokeStyle='#2b2b31'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(0,0,f.r*0.62,-Math.PI*0.9,-Math.PI*0.1); ctx.stroke();
+      // crest
+      ctx.strokeStyle=f.light; ctx.lineWidth=4;
+      ctx.beginPath(); ctx.moveTo(-f.r*0.1,-f.r*0.16); ctx.quadraticCurveTo(0,-f.r*0.72,f.r*0.4,-f.r*0.5); ctx.stroke();
+      // eyes (facing)
+      var ex=f.r*0.32;
+      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(ex,-f.r*0.16,2.6,0,Math.PI*2); ctx.arc(ex,f.r*0.16,2.6,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#141414'; ctx.beginPath(); ctx.arc(ex+1,-f.r*0.16,1.3,0,Math.PI*2); ctx.arc(ex+1,f.r*0.16,1.3,0,Math.PI*2); ctx.fill();
+      // hit flash
+      if(f.hit){ f.hit.t-=1/60; if(f.hit.t<0) f.hit=null; else { ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.beginPath(); ctx.arc(0,0,f.r,0,Math.PI*2); ctx.fill(); } }
+      ctx.restore();
+
+      // name + hp
+      var bw=Math.max(44, f.name.length*7.5);
+      ctx.fillStyle='rgba(0,0,0,0.55)'; roundRect(ctx, f.x-bw/2-4, f.y-f.r-26, bw+8, 19, 5); ctx.fill();
+      ctx.fillStyle='#0f0c08'; roundRect(ctx, f.x-bw/2-1, f.y-f.r-23, bw+2, 8, 4); ctx.fill();
+      var hpf=Math.max(0, f.hp/f.maxHp);
+      ctx.fillStyle = hpf>0.5? '#58c24f' : (hpf>0.25? '#e0b03a' : '#e04f3a');
+      if(hpf>0) { roundRect(ctx, f.x-bw/2, f.y-f.r-22.5, (bw-2)*hpf, 5.5, 3); ctx.fill(); }
+      ctx.fillStyle=f.light; ctx.font='bold 11px -apple-system,Segoe UI,sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(f.name, f.x, f.y-f.r-34);
+    },
+    particles(){
+      for(var i=0;i<particles.length;i++){
+        var p=particles[i];
+        ctx.globalAlpha=Math.max(0, Math.min(1,p.life*2));
+        ctx.fillStyle=p.col;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+      }
+      ctx.globalAlpha=1;
+    }
+  };
+
+  function roundRect(c,x,y,w,h,r){
+    if(w<0||h<0) return;
+    c.beginPath();
+    c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+    c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath();
+  }
+
+  function render(t){
+    // keep canvas sized
+    var W2=canvas.clientWidth, H2=canvas.clientHeight;
+    if(W2!==fight.W||H2!==fight.H){ fight.W=W2; fight.H=H2; W=W2; H=H2; }
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    gfx.arenaBg(ctx,W,H);
+    var sx=0, sy=0;
+    if(shakeT>0){ sx=(Math.random()-0.5)*xmags; sy=(Math.random()-0.5)*xmags; }
+    ctx.save(); ctx.translate(sx,sy);
+    // draw fighters sorted by y for depth
+    var sorted=fighters.slice().sort(function(a,b){return (a.y)-(b.y);});
+    for(var i=0;i<sorted.length;i++) gfx.fighter(sorted[i]);
+    gfx.particles();
+    ctx.restore();
+  }
+
+  /* ---------- feed / hud ---------- */
+  var feedTimers=[];
+  var aliveEl,_feedEl,_aliveCountEl,_bannerEl;
+  function updateHUD(){
+    aliveEl = aliveEl || document.getElementById('aliveCount');
+    var rem = fighters.filter(function(f){return f.alive;}).length;
+    aliveEl.innerHTML = '<b>'+rem+'</b> gladiator'+(rem===1?'':'s')+' remain'+(rem===1?'':'ing');
+  }
+  function flushFeed(){
+    if(!_feedEl) _feedEl = document.getElementById('killfeed');
+    var html='';
+    for(var i=0;i<feed.length;i++) html += '<div class="kf">'+feed[i].html+'</div>';
+    _feedEl.innerHTML=html;
+  }
+
+  /* ---------- loop ---------- */
+  var raf;
+  function loop(t){
+    if(!lastTime) lastTime=t;
+    var dt=Math.min(0.033,(t-lastTime)/1000); lastTime=t;
+    if(dt>0){ step(dt); }
+    render(t);
+    if(ended){
+      endTimer -= dt;
+      if(endTimer<=0){ stopFight(); }
+    }
+    if(state==='fight') raf=requestAnimationFrame(loop);
+  }
+  updateHUD(); flushFeed();
+  sfx('crowd');
+  raf=requestAnimationFrame(loop);
+
+  function stopFight(){
+    if(fight.feedTimer) clearInterval(fight.feedTimer);
+    cancelAnimationFrame(raf);
+    buildResults();
+  }
+  fight.stopFight=stopFight;
+}
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('on'); });
+  document.getElementById(id).classList.add('on');
+}
+
+/* ======================== results ======================== */
+function buildResults(){
+  state='results';
+  var d = fight ? fight.deathOrder : [];
+  var everyone = names.slice();
+  // pick order: champion last-standing = #1, then reverse death order
+  var picks = [];
+  var champ = everyone.filter(function(n){ return d.indexOf(n)=== -1; });
+  // champion is the sole survivor
+  var survivor = null;
+  if(fight && fight.fighters) {
+    var src = fight.fighters.filter(function(f){ return f.alive; });
+    if(src.length) survivor = src[0].name;
+  }
+  var order = [];
+  if(survivor) order.push(survivor);
+  var rev = d.slice().reverse();
+  for(var i=0;i<rev.length;i++) if(order.indexOf(rev[i])===-1) order.push(rev[i]);
+  // safety: append any stragglers
+  for(i=0;i<names.length;i++) if(order.indexOf(names[i])===-1) order.push(names[i]);
+
+  document.getElementById('resSub').textContent = names.length+' gladiators • '+d.length+' fell in the arena • one rose above';
+
+  var list = document.getElementById('pickList');
+  var html='';
+  for(i=0;i<order.length;i++){
+    var n=order[i];
+    var fellIdx = d.indexOf(n);
+    var p1 = i===0;
+    var crown = p1 ? '<span class="crown">👑</span>' : '';
+    var fallTxt = p1 ? 'CHAMPION — survived it all' : 'survived to pick #'+(i+1);
+    if(fellIdx>=0 && !p1) fallTxt = 'fell #'+(fellIdx+1)+' of '+d.length;
+    html += '<div class="pickrow'+(p1?' p1':'')+'"><div class="num">'+ (p1?'1':(i+1)) +'</div>'+
+            '<div class="nm">'+crown+esc(n)+'</div><div class="fall">'+fallTxt+'</div></div>';
+  }
+  list.innerHTML = html;
+
+  show('results');
+  window.scrollTo(0,0);
+}
+function fightersAliveSafe(){ return true; }
+
+document.getElementById('rerunBtn').onclick = function(){ startFight(); };
+document.getElementById('editBtn').onclick = function(){ state='setup'; show('setup'); renderRoster(); };
+
+/* autosave roster renders */
+renderRoster();
+</script>
+</body>
+</html>
