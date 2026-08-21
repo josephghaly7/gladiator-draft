@@ -659,6 +659,7 @@ function startFight(){
     if(!lastTime) lastTime=t;
     var dt=Math.min(0.033,(t-lastTime)/1000); lastTime=t;
     if(dt>0){ step(dt); }
+    updateHUD();
     render(t);
     if(ended){
       endTimer -= dt;
