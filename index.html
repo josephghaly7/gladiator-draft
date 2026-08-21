@@ -284,6 +284,7 @@ function startFight(){
   var deathOrder = [];           // names in order they fell
   var feed = [];                 // {txt, html}
   var particles = [];
+  var stains = [];
   var xmags = 0, shakeT = 0;
   var ended = false, endTimer = 0;
 
@@ -292,24 +293,41 @@ function startFight(){
   var feedEl = document.getElementById('killfeed');
   var bannerEl = document.getElementById('banner');
 
+  // persistent blood pool on the sand
+  function addStain(x,y,n){
+    for(var i=0;i<n;i++){
+      stains.push({
+        x:x+(Math.random()-0.5)*18,
+        y:y+(Math.random()-0.5)*18,
+        r:3+Math.random()*9,
+        col: Math.random()<0.5 ? '#6e0e08' : '#57100b',
+        a: 0.55+Math.random()*0.35
+      });
+    }
+    if(stains.length>520) stains.splice(0, stains.length-520);
+  }
+
   function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
 
   /* give every structure element its own random colors */
   function makeFighter(name, idx, W, H, total){
     var pal = PALETTE[idx % PALETTE.length];
-    var margin = Math.max(60, Math.min(W,H)*0.08);
+    // all start inside the arena circle, clustered around the centre
+    var ringR = Math.min(W,H)*0.34;
+    var a0 = Math.random()*Math.PI*2;
+    var r0 = Math.sqrt(Math.random())*ringR;
     var f = {
       name:name, emoji:EMOJI[idx % EMOJI.length],
       col:pal[0], light:pal[1],
-      x: margin + Math.random()*(W-2*margin),
-      y: margin + Math.random()*(H-2*margin),
+      x: W/2 + Math.cos(a0)*r0,
+      y: H*0.5 + Math.sin(a0)*r0,
       vx:0, vy:0, ang:Math.random()*Math.PI*2,
       r: 16,
       hp: 100, maxHp:100,
       alive:true, dying:false, dieT:0,
       target:null, atkCd: 0,
       // personality (drives randomness)
-      speed: 55 + Math.random()*85,
+      speed: 120 + Math.random()*120,
       dmg:  9 + Math.random()*11,
       aggro: 90 + Math.random()*160,
       range: 34 + Math.random()*18,
@@ -375,6 +393,12 @@ function startFight(){
       f.x += f.vx*dt; f.y += f.vy*dt;
       if(f.x < f.r){ f.x=f.r; f.vx=Math.abs(f.vx); } else if(f.x>W-f.r){ f.x=W-f.r; f.vx=-Math.abs(f.vx); }
       if(f.y < f.r){ f.y=f.r; f.vy=Math.abs(f.vy); } else if(f.y>H-f.r){ f.y=H-f.r; f.vy=-Math.abs(f.vy); }
+
+      // blood trail when wounded
+      if(f.hp < f.maxHp*0.45){
+        f.bleedT = (f.bleedT||0) - dt;
+        if(f.bleedT<=0){ addStain(f.x, f.y, 1); f.bleedT=0.35; }
+      }
       if(nn.f) f.ang = Math.atan2(nn.f.y-f.y, nn.f.x-f.x);
 
       // separator (soft body)
@@ -404,16 +428,23 @@ function startFight(){
     var crit = Math.random()<0.12;
     if(crit) dmg*=1.8;
     def.hp -= dmg;
-    def.hit = {t:0.3, col:att.col};
-    for(var k=0;k<6;k++){
+    def.hit = {t:0.35, col:att.col};
+    var dir = Math.atan2(def.y-att.y, def.x-att.x);
+    var n = crit ? 22 : 13;
+    for(var k=0;k<n;k++){
+      var sp = 90+Math.random()*220;
+      var ang = dir + (Math.random()-0.5)*1.6;
+      var vx = Math.cos(ang)*sp, vy = Math.sin(ang)*sp;
+      if(Math.random()<0.4) vy -= 60;
       particles.push({
         x:def.x+ (Math.random()-0.5)*def.r*1.4,
         y:def.y+ (Math.random()-0.5)*def.r*1.4,
-        vx:(Math.random()-0.5)*120, vy:(Math.random()-1)*120, g:320,
-        life:0.3+Math.random()*0.4, r:1.5+Math.random()*2.5,
-        col:crit?'#ffd24a':'#b0302a'
+        vx:vx, vy:vy, g:360,
+        life:0.35+Math.random()*0.5, r:2+Math.random()*3.5,
+        col: crit ? '#ffd24a' : (Math.random()<0.25 ? '#e04028' : '#c81e1a')
       });
     }
+    if(Math.random()<0.8) addStain(def.x, def.y, crit ? 2 : 1);
     if(crit) shakeT = 0.12;
     xmags = Math.max(xmags, 2);
     sfx('hit');
@@ -425,13 +456,15 @@ function startFight(){
     def.alive=false; def.dying=true; def.dieT=0.9;
     deaths++;
     deathOrder.push(def.name);
-    for(var k=0;k<26;k++){
+    for(var k=0;k<70;k++){
       particles.push({
         x:def.x, y:def.y,
-        vx:(Math.random()-0.5)*260, vy:-Math.random()*260-40, g:460,
-        life:0.5+Math.random()*0.7, r:2+Math.random()*3.5, col:'#c03028'
+        vx:(Math.random()-0.5)*340, vy:(Math.random()-0.9)*340, g:420,
+        life:0.5+Math.random()*0.9, r:2.5+Math.random()*4.5,
+        col: Math.random()<0.2 ? '#e04028' : '#c81e1a'
       });
     }
+    addStain(def.x, def.y, 5);
     shakeT = 0.3; xmags = Math.max(xmags, 7);
     sfx('die');
     feed.push({
@@ -587,6 +620,17 @@ function startFight(){
     var sx=0, sy=0;
     if(shakeT>0){ sx=(Math.random()-0.5)*xmags; sy=(Math.random()-0.5)*xmags; }
     ctx.save(); ctx.translate(sx,sy);
+    // pooled blood on the sand (behind the fighters)
+    for(var s=0;s<stains.length;s++){
+      var st=stains[s];
+      ctx.globalAlpha=st.a;
+      ctx.fillStyle=st.col;
+      ctx.beginPath(); ctx.arc(st.x,st.y,st.r,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=st.a*0.5;
+      ctx.beginPath(); ctx.arc(st.x+st.r*0.5, st.y+st.r*0.4, st.r*0.45,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(st.x-st.r*0.55, st.y-st.r*0.5, st.r*0.4,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
     // draw fighters sorted by y for depth
     var sorted=fighters.slice().sort(function(a,b){return (a.y)-(b.y);});
     for(var i=0;i<sorted.length;i++) gfx.fighter(sorted[i]);
